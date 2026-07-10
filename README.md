@@ -12,7 +12,7 @@ MCP-capable agent.
 ### 1. Install skill
 
 ```bash
-npx skills add xnjiang/autowhisper
+npx skills add xnjiang/autowhisper-skill
 ```
 Or tell your AI: `Install skill from https://autowhisper.xyz/skill`
 
