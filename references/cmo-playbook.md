@@ -4,8 +4,11 @@
 micro-instructions — it owns the content pipeline.
 
 ## Good loop
-1. Make sure a product exists (`add my product <url>`); if brand-new, let the
-   CMO run its first batch.
+1. Make sure a product exists — add it with a **product URL** (*"add my product
+   https://mystore.com/widget"*); the CMO extracts the image from the page. A
+   text-only description will not work — it needs a real product image or URL
+   (placeholder/stock images are rejected). If brand-new, let the CMO run its
+   first batch.
 2. Let content land in the Feed, then review: ask the CMO to summarize
    pending items; approve the good ones, reject the rest.
 3. Ensure a platform is connected (one-time OAuth — see SKILL.md). Then ask

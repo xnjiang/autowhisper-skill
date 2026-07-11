@@ -85,6 +85,14 @@ run the full CMO batch · approve/reject feed items · connect platforms ·
 **publish** · schedule · analytics · strategy · toggle daily auto-run.
 Just ask the CMO in plain language — it picks the right action.
 
+## Adding a product (important)
+To add a product, give the CMO a **product URL** — it extracts the product's
+image and details automatically: *"Add my product https://mystore.com/widget"*.
+A text description alone will **not** create it: the CMO requires a real product
+image (or a real image URL) and will ask for one. Placeholder/stock images
+(picsum, placeholder.com, etc.) are rejected. So always lead with the product's
+real URL or image.
+
 ## One-time human setup (say this clearly)
 
 - **Connecting a social platform**: OAuth platforms (tiktok, instagram,
