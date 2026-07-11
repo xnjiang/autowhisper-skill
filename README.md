@@ -2,10 +2,11 @@
 
 **Audience: Human (project overview)**
 
-Run your AI CMO from your agent. Connect a product and AutoWhisper generates,
-schedules, and publishes on-brand social content across 30+ platforms — you
-drive its CMO in natural language, from Claude Code, Cursor, n8n, or any
-MCP-capable agent.
+A marketing department for your agent. Connect a product and AutoWhisper turns
+it into batches of ready-to-run ad creatives, keeps every channel alive across
+30+ platforms, and tells you which creative to fund — driven in natural
+language from Claude Code, Cursor, n8n, or any MCP-capable agent.
+(Honest scope: posting ≠ traffic — reach comes from your paid campaigns.)
 
 ## Quick Start
 

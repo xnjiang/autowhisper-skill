@@ -1,6 +1,6 @@
 ---
 name: autowhisper
-description: Drive AutoWhisper's AI CMO from your agent — add a product, generate on-brand social content (UGC video, posts, images), approve, connect platforms, and publish across 30+ networks, all in natural language. Use when the user asks to "run my marketing", "make/schedule/publish social content", "hire a CMO", "post about my product", or mentions AutoWhisper.
+description: Turn any product into batches of on-brand ad creatives (UGC video, posts, images) from your agent — plus advice on which creative to fund — and keep every social channel alive across 30+ networks. Use when the user asks to "make ads", "ad creatives", "UGC ads for my product", "run my marketing", "post about my product", or mentions AutoWhisper.
 homepage: https://autowhisper.xyz
 metadata:
   author: AutoWhisper
@@ -18,9 +18,14 @@ metadata:
 **Audience: AI Agent**
 
 You drive **AutoWhisper's CMO** — the same brain as the AutoWhisper web
-dashboard chat — over a small HTTP API. You give it instructions in natural
-language; it plans, generates, approves, schedules, and publishes on-brand
-social content for the user's product.
+dashboard chat — over a small HTTP API. Its job, in priority order: (1) turn
+the user's product into **batches of on-brand ad creatives** (UGC video,
+posts, images) for their paid campaigns, (2) advise **which creative to fund**
+and how to target, (3) keep their **channels alive** across 30+ platforms so
+an empty profile never kills their ad conversion.
+
+**Be straight with users: posting ≠ traffic.** Reach comes from their paid
+campaigns — never imply that publishing alone will bring views or followers.
 
 ## Important: Error Handling
 
@@ -80,9 +85,11 @@ curl -s -X POST https://autowhisper.xyz/api/cmo/confirm \
 
 ## What you can do (all via `message`)
 
-Add/list/edit products · generate content (UGC video, posts, feature images) ·
-run the full CMO batch · approve/reject feed items · connect platforms ·
-**publish** · schedule · analytics · strategy · toggle daily auto-run.
+**Generate batches of ad creatives** (UGC video, posts, feature images —
+variations to A/B test) · **which-to-run advice** (which creative to fund,
+targeting, budget) · **keep channels alive** (approve/reject feed items,
+schedule, publish across 30+ platforms) · add/list/edit products · run the
+full CMO batch · analytics · strategy · toggle daily auto-run.
 Just ask the CMO in plain language — it picks the right action.
 
 ## Adding a product (important)
