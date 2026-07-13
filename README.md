@@ -2,11 +2,18 @@
 
 **Audience: Human (project overview)**
 
-A marketing department for your agent. Connect a product and AutoWhisper turns
-it into batches of ready-to-run ad creatives, keeps every channel alive across
-30+ platforms, and tells you which creative to fund — driven in natural
+**Never make marketing content again.** Hand AutoWhisper's AI CMO one product
+and the whole job leaves your desk: it learns what you sell, watches what your
+rivals post, and makes content that doesn't look like an ad — in every
+language, on every channel you've connected, every day. Drive it in natural
 language from Claude Code, Cursor, n8n, or any MCP-capable agent.
-(Honest scope: posting ≠ traffic — reach comes from your paid campaigns.)
+
+Two things make that promise credible: the content **doesn't read as an
+advertisement** (a hard ad dies in an organic feed), and the CMO **has seen
+what your competitors are posting** before it writes a word.
+
+(Honest scope: posting ≠ traffic. AutoWhisper guarantees the content exists,
+fits your brand, and goes out — not that it goes viral.)
 
 ## Quick Start
 
