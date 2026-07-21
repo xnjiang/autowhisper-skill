@@ -15,6 +15,11 @@ Poll the turn started by the given user `message_id`.
 - `200 {"done":true,"messages":[{"message_id":9,"role":"assistant","content":"...","message_kind":null,"pending_action":null}]}`
 - A message with `"message_kind":"confirm_required"` and a `pending_action`
   `{ "tool":"...", "args":{...} }` requires a confirm.
+- A message may include `"actions":[{ "label":"...", "url":"https://cdn.autowhisper.xyz/...", "style":"secondary" }]`
+  — clickable cards the CMO surfaces (content **media links**, connect links).
+  The reply `content` never inlines raw URLs, so read `actions[].url` when you
+  need the image/video URL of a piece of content (ask e.g. "give me the image
+  link for X" / "list my recent content with images").
 - `404` unknown id / not yours
 
 Poll every ~3s; a turn typically completes in seconds (generation of media
