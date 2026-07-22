@@ -102,7 +102,7 @@ echo "$RESP" | jq -r '.messages[] | select(.role=="assistant") | .content'
 ```
 Relay the assistant's `content` to the user in their language.
 
-### 3. If the CMO asks to confirm a destructive action
+### 3. If the CMO asks to confirm a high-impact action
 A message with `message_kind == "confirm_required"` carries a
 `pending_action`. Show the user what it will do, then:
 ```bash
@@ -121,9 +121,10 @@ publish to every channel the user has connected. · **Aim it** — which creativ
 to put money behind, who to target, what the analytics say, what to do next. ·
 Plus: add/list/edit products, run the full CMO cycle, toggle daily auto-run.
 
-For read-only facts, use the fast API above. For work, ask the CMO in plain
-language — it picks the right action. Prefer giving it a goal ("keep my
-channels alive this week") over micro-instructions; it owns the pipeline.
+For read-only facts, use the fast API above. For a clear operational action
+(feed approval, reschedule, retry, direct field edit), prefer the direct API
+endpoints in `references/api-reference.md`; they are synchronous and avoid an
+LLM turn. Use CMO chat when the work needs judgment, planning, or generation.
 
 ## Adding a product (important)
 To add a product, give the CMO a **product URL** — it extracts the product's
@@ -142,8 +143,9 @@ real URL or image.
   connecting, you can publish autonomously.
 - **Buying more credits**: checkout is done by the human on
   autowhisper.xyz. New accounts have free credits to start.
-- **Fine-grained edits** to a specific caption/headline happen on the web
-  edit page (the CMO returns a link); you handle create/regenerate/delete.
+- **Fine-grained edits** to title, full copy/story, hook, CTA, tone, and
+  keywords can be made directly by CMO/API without a generation run. OAuth,
+  payment, and legal/account actions remain human-only.
 
 ## When to upsell
 

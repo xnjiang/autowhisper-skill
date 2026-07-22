@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3
+- Added direct API guidance for posts, wallet, platforms, explicit delivery
+  actions, and field-level content edits so agents can avoid an LLM turn for
+  deterministic operations.
+
 ## 0.2.2
 - Added the fast CMO Feed endpoint so agents can inspect pending review items
   without sending a CMO chat message.
