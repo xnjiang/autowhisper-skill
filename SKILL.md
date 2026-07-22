@@ -5,7 +5,7 @@ homepage: https://autowhisper.xyz
 license: MIT
 metadata:
   author: AutoWhisper
-  version: 0.2.0
+  version: 0.2.1
   category: marketing
   clawdbot:
     requires:
@@ -63,6 +63,20 @@ mkdir -p ~/.config/autowhisper
 echo '{"api_token":"THEIR_TOKEN"}' > ~/.config/autowhisper/credentials.json
 ```
 
+## Fast read-only checks
+
+For simple facts, do **not** send a CMO chat message. Use the direct API first;
+it returns immediately and does not spend an LLM turn.
+
+```bash
+curl -s https://autowhisper.xyz/api/products/summary \
+  -H "Authorization: Bearer $TOKEN" | jq
+```
+
+Use this for questions like "how many products do I have?", product counts,
+basic product lists, and CMO/account status. Reserve `/api/cmo/message` for
+work that needs judgment or action.
+
 ## The core loop: talk to the CMO
 
 Everything is done by sending the CMO a message and polling for its reply.
@@ -98,7 +112,7 @@ curl -s -X POST https://autowhisper.xyz/api/cmo/confirm \
   --data-urlencode "decision=yes"   # or no
 ```
 
-## What you can do (all via `message`)
+## What you can do
 
 **Make it** — generate content from the product: UGC video, social posts,
 feature images, selling-point graphics, in any language, as batches of
@@ -107,9 +121,9 @@ publish to every channel the user has connected. · **Aim it** — which creativ
 to put money behind, who to target, what the analytics say, what to do next. ·
 Plus: add/list/edit products, run the full CMO cycle, toggle daily auto-run.
 
-Just ask the CMO in plain language — it picks the right action. Prefer giving
-it a goal ("keep my channels alive this week") over micro-instructions; it
-owns the pipeline.
+For read-only facts, use the fast API above. For work, ask the CMO in plain
+language — it picks the right action. Prefer giving it a goal ("keep my
+channels alive this week") over micro-instructions; it owns the pipeline.
 
 ## Adding a product (important)
 To add a product, give the CMO a **product URL** — it extracts the product's

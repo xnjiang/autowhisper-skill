@@ -2,6 +2,30 @@
 
 Base: `https://autowhisper.xyz`  ·  Auth: `Authorization: Bearer <api_token>`
 
+## Fast read-only endpoints
+
+Use these for simple facts instead of `/api/cmo/message`; they are synchronous
+and do not spend an LLM turn.
+
+### GET /api/products/summary
+Returns account-level product counts plus counts by active workspace.
+- `200 {"account":{"workspaces_count":2,"active_products_count":12,"archived_products_count":1,"total_products_count":13},"current_workspace":{...},"workspaces":[...]}`
+- `401` invalid/missing token
+
+### GET /api/products
+Lists products in active workspaces.
+Query params: `workspace_id` (optional int), `include_archived` (optional
+bool), `limit` (optional int).
+- `200 {"scope":"account","count":12,"returned":12,"products":[{"id":1,"name":"...","product_type":"digital","workspace_name":"...","archived":false,"has_main_image":true}]}`
+- `401` invalid/missing token · `404` inaccessible workspace
+
+### GET /api/cmo/status
+Returns a compact status snapshot: current workspace, product counts, feed
+status counts, platform connection counts, wallet balance, and automation
+settings.
+- `200 {"products":{"active_count":12,"archived_count":1,"total_count":13},"feed":{"pending":2},"platforms":{"connected_count":4},"wallet":{"formatted_balance":"9 tokens"},"settings":{...}}`
+- `401` invalid/missing token
+
 ## POST /api/cmo/message
 Send the CMO an instruction. Async — returns immediately.
 Form params: `message` (required), `product_id` (optional int),

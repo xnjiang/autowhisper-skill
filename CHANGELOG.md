@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+- Added fast read-only API guidance for product counts, product lists, and CMO
+  status so agents do not spend a CMO chat turn on simple facts.
+
 ## 0.2.0
 - Positioning: sell **relief**, not output. The skill led with "batches of ad
   creatives" (a capability); nobody with a product wakes up wanting ad
