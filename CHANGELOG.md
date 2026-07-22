@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2
+- Added the fast CMO Feed endpoint so agents can inspect pending review items
+  without sending a CMO chat message.
+
 ## 0.2.1
 - Added fast read-only API guidance for product counts, product lists, and CMO
   status so agents do not spend a CMO chat turn on simple facts.

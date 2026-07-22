@@ -5,7 +5,7 @@ homepage: https://autowhisper.xyz
 license: MIT
 metadata:
   author: AutoWhisper
-  version: 0.2.1
+  version: 0.2.2
   category: marketing
   clawdbot:
     requires:
@@ -74,8 +74,8 @@ curl -s https://autowhisper.xyz/api/products/summary \
 ```
 
 Use this for questions like "how many products do I have?", product counts,
-basic product lists, and CMO/account status. Reserve `/api/cmo/message` for
-work that needs judgment or action.
+basic product lists, pending Feed review, and CMO/account status. Reserve
+`/api/cmo/message` for work that needs judgment or action.
 
 ## The core loop: talk to the CMO
 

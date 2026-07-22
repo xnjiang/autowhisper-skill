@@ -26,6 +26,14 @@ settings.
 - `200 {"products":{"active_count":12,"archived_count":1,"total_count":13},"feed":{"pending":2},"platforms":{"connected_count":4},"wallet":{"formatted_balance":"9 tokens"},"settings":{...}}`
 - `401` invalid/missing token
 
+### GET /api/cmo/feed
+Lists CMO Feed items without a chat turn.
+Query params: `status` (`pending` default, or `approved`/`rejected`/
+`dismissed`/`executed`/`all`), `workspace_id` (optional int), `limit`
+(optional int).
+- `200 {"status":"pending","counts":{"pending":2,"approved":1},"feed_items":[{"id":1,"status":"pending","feedable":{"type":"SocialCopy","title":"...","product_name":"..."},"available_actions":[{"tool":"approve_feed_item","confirmation_required":false}]}]}`
+- `401` invalid/missing token · `404` inaccessible workspace · `422` invalid status
+
 ## POST /api/cmo/message
 Send the CMO an instruction. Async — returns immediately.
 Form params: `message` (required), `product_id` (optional int),
