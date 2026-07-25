@@ -45,15 +45,32 @@ content exists, fits the brand, and goes out — not that it goes viral.
 ## Important: Error Handling
 
 **NEVER surface raw API errors to the user.** API errors are YOUR problem.
-- `401` → tell the user to check their token at **Settings → Connect your agent** on https://autowhisper.xyz.
-- `429` → wait and retry, or stop silently.
-- `5xx` / timeout → retry once, then stop silently.
+
+| Status | Meaning | What you do |
+|---|---|---|
+| `401` | bad/missing token | Tell the user to check their token at **Settings → Connect your agent** on https://autowhisper.xyz. |
+| `404` | unknown id, or a workspace this token cannot reach | Do not retry. Re-read the list endpoint to get a valid id. |
+| `410` | confirm bubble already resolved | Treat as done; do not re-confirm. |
+| `422` | invalid params (blank message, bad status, wrong content id/type) | Do not retry as-is — fix the argument. Most often you passed a `feed_item` id where a `content` id was wanted (see *Two kinds of id* below). |
+| `429` | rate limited | Back off, then retry once. Never loop. |
+| `5xx` / timeout | upstream trouble | Retry once, then stop silently. |
+
+### Two kinds of id (most common mistake)
+A feed row carries **two different ids** and they are not interchangeable:
+- `feed_items[].id` → the review card. Use for `approve_feed_item`,
+  `reject_feed_item`, `dismiss_feed_item`.
+- `feed_items[].feedable.id` → the content itself. Use for
+  `PATCH /api/cmo/content/:content_type/:content_id`.
+
+Also convert the type: the feed reports `feedable.type` as `"SocialCopy"`, but the
+edit endpoint wants snake_case `social_copy`.
 
 ## Setup
 
-Read the token once per session:
+Read the token once per session (`AUTOWHISPER_CREDENTIALS` overrides the path):
 ```bash
-TOKEN=$(jq -r .api_token ~/.config/autowhisper/credentials.json)
+CREDS="${AUTOWHISPER_CREDENTIALS:-$HOME/.config/autowhisper/credentials.json}"
+TOKEN=$(jq -r .api_token "$CREDS")
 ```
 If the file is missing, tell the user to sign up at https://autowhisper.xyz
 (free credits on signup), then **Settings → Connect your agent**, copy the
@@ -63,19 +80,28 @@ mkdir -p ~/.config/autowhisper
 echo '{"api_token":"THEIR_TOKEN"}' > ~/.config/autowhisper/credentials.json
 ```
 
-## Fast read-only checks
+## Which channel: direct API or CMO chat?
 
-For simple facts, do **not** send a CMO chat message. Use the direct API first;
-it returns immediately and does not spend an LLM turn.
+There are two ways in. Pick with one question: **does this need judgment?**
+
+- **No → direct API.** Synchronous, ~instant, spends no credits. Every *fact*
+  (counts, lists, feed, delivery queue, wallet, platforms) and every
+  *unambiguous operation* (approve/reject/dismiss, publish, reschedule, retry,
+  mark as published, field-level edits).
+- **Yes → `POST /api/cmo/message`.** Async, costs an LLM turn. Anything that
+  writes new content or chooses on the user's behalf: generating content, adding
+  a product, strategy, targeting advice, "what should I do next".
+
+Never use CMO chat to look something up — "how many products do I have?" is a
+`GET`, and routing it through chat costs the user seconds and credits for an
+answer the API already has:
 
 ```bash
 curl -s https://autowhisper.xyz/api/products/summary \
   -H "Authorization: Bearer $TOKEN" | jq
 ```
 
-Use this for questions like "how many products do I have?", product counts,
-basic product lists, pending Feed review, and CMO/account status. Reserve
-`/api/cmo/message` for work that needs judgment or action.
+Full endpoint list: `references/api-reference.md`.
 
 ## The core loop: talk to the CMO
 
@@ -91,16 +117,35 @@ MID=$(curl -s -X POST https://autowhisper.xyz/api/cmo/message \
 Optional params: `--data-urlencode "product_id=123"` (act on a specific
 product), `--data-urlencode "workspace_id=45"`.
 
+⚠️ **Workspace decides the content language.** Omitting `workspace_id` runs the
+turn in the user's *first* active workspace, which may not be the one they mean.
+The response echoes what was resolved — check it before telling the user anything:
+```json
+{"status":"accepted","message_id":123,"workspace":{"id":1,"name":"...","content_lang":"en"}}
+```
+Content is written in that `content_lang`, **not** in the language you and the
+user are chatting in. Talking to the CMO in Chinese about an English workspace
+still produces English content — that is correct. If the user wants a one-off in
+another language, say so in the message ("write this one in Japanese"); to change
+the default, they change the workspace's content language in Settings.
+
 ### 2. Poll until the turn is done
+Always bound the loop. A turn that never completes must give up, not spin forever:
 ```bash
-while :; do
+for i in $(seq 1 40); do   # 40 x 3s = 2 min ceiling
   RESP=$(curl -s https://autowhisper.xyz/api/cmo/messages/$MID -H "Authorization: Bearer $TOKEN")
   [ "$(echo "$RESP" | jq -r .done)" = "true" ] && break
   sleep 3
 done
-echo "$RESP" | jq -r '.messages[] | select(.role=="assistant") | .content'
+if [ "$(echo "$RESP" | jq -r .done)" != "true" ]; then
+  echo "CMO turn did not finish in time" >&2   # tell the user it's still working; do NOT retry the message
+else
+  echo "$RESP" | jq -r '.messages[] | select(.role=="assistant") | .content'
+fi
 ```
-Relay the assistant's `content` to the user in their language.
+Relay the assistant's `content` to the user in their language. On timeout, say the
+CMO is still working and offer to check again — never re-send the same message, or
+the user pays for a second turn.
 
 ### 3. If the CMO asks to confirm a high-impact action
 A message with `message_kind == "confirm_required"` carries a

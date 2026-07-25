@@ -31,23 +31,38 @@ Lists CMO Feed items without a chat turn.
 Query params: `status` (`pending` default, or `approved`/`rejected`/
 `dismissed`/`executed`/`all`), `workspace_id` (optional int), `limit`
 (optional int).
-- `200 {"status":"pending","counts":{"pending":2,"approved":1},"feed_items":[{"id":1,"status":"pending","feedable":{"type":"SocialCopy","title":"...","product_name":"..."},"available_actions":[{"tool":"approve_feed_item","confirmation_required":true}]}]}`
+- `200 {"status":"pending","counts":{"pending":2,"approved":1},"feed_items":[{"id":1,"status":"pending","feedable":{"type":"SocialCopy","id":4,"title":"...","product_name":"..."},"available_actions":[{"tool":"approve_feed_item","confirmation_required":true}]}]}`
 - `401` invalid/missing token · `404` inaccessible workspace · `422` invalid status
 
+Account-wide by default; `workspace_id` narrows it. Note the two ids on each row:
+`id` is the feed item (for the `actions` endpoint), `feedable.id` is the content
+(for the content `PATCH`). See the warning under that endpoint.
+
 ### GET /api/posts
-Lists the active workspace's delivery queue without a chat turn.
+Lists the delivery queue across **all active workspaces** (same scope as
+`/api/cmo/feed`); pass `workspace_id` to narrow to one.
 Query params: `status` (optional `draft`/`scheduled`/`publishing`/`published`/
 `failed`), `workspace_id` (optional int), `limit` (optional int).
-- `200 {"workspace":{"id":1},"posts":[{"id":9,"status":"scheduled","scheduled_at":"...","platform":{"type":"linkedin"},"content":{"type":"SocialCopy","id":4,"title":"..."}}]}`
+- `200 {"scope":"account","workspace":null,"posts":[{"id":9,"status":"scheduled","scheduled_at":"...","workspace":{"id":1,"name":"..."},"platform":{"type":"linkedin"},"content":{"type":"SocialCopy","id":4,"title":"..."},"failure":null}]}`
+- `404` inaccessible workspace · `422` invalid status
+
+**Failed posts** carry a `failure` block — read it before deciding what to do:
+- `{"reason":"<platform's real message>","needs_reconnect":false,"retry_count":1}`
+- `needs_reconnect: true` → only the human can fix it (re-run OAuth);
+  `retry_post` will keep failing. Otherwise `retry_post` is worth one attempt; if
+  `reason` points at the content itself, edit it first, then retry.
 
 ### GET /api/wallet
 Returns the token owner's available credits.
 - `200 {"balance":9.0,"formatted_balance":"9 credits","currency":"credits"}`
 
 ### GET /api/platforms
-Lists the active workspace's connected destinations and connection health.
+Lists connected destinations and connection health across **all active
+workspaces**, so it can never disagree with `/api/cmo/status`'s counts. Pass
+`workspace_id` to narrow to one. Each row names its workspace.
 Query params: `workspace_id` (optional int).
-- `200 {"workspace":{"id":1},"platforms":[{"id":2,"type":"linkedin","connected":true,"needs_reconnect":false,"auto_publishable":true}]}`
+- `200 {"scope":"account","workspace":null,"platforms":[{"id":2,"workspace":{"id":1,"name":"..."},"type":"linkedin","connected":true,"needs_reconnect":false,"auto_publishable":true}]}`
+- `404` inaccessible workspace
 
 ## Direct deterministic actions
 
@@ -67,6 +82,12 @@ executing immediately:
 ### PATCH /api/cmo/content/:content_type/:content_id
 Edits exact fields without a generation run or credit charge. `content_type` is
 one of `social_copy`, `lookbook`, `feature_poster`, `idea`.
+
+⚠️ `:content_id` is `feed_items[].feedable.id`, **not** `feed_items[].id`, and
+`:content_type` is the snake_case form of `feedable.type` (`SocialCopy` →
+`social_copy`). Passing the feed item id is the usual cause of a `422`
+"not found". Works on content in any of the token owner's active workspaces.
+
 Form params: any of `title`, `body`, `hook`, `cta`, `tone`, `keywords[]`, and
 optional `workspace_id`.
 - `200 {"success":true,"updated_fields":["title","content"],"message":"..."}`
