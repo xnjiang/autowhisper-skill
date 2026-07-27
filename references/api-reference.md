@@ -31,7 +31,7 @@ Lists CMO Feed items without a chat turn.
 Query params: `status` (`pending` default, or `approved`/`rejected`/
 `dismissed`/`executed`/`all`), `workspace_id` (optional int), `limit`
 (optional int).
-- `200 {"status":"pending","counts":{"pending":2,"approved":1},"feed_items":[{"id":1,"status":"pending","feedable":{"type":"SocialCopy","id":4,"title":"...","product_name":"..."},"available_actions":[{"tool":"approve_feed_item","confirmation_required":true}]}]}`
+- `200 {"status":"pending","counts":{"pending":2,"approved":1},"feed_items":[{"id":1,"status":"pending","feedable":{"type":"SocialCopy","id":4,"title":"...","product_name":"..."},"available_actions":[{"tool":"approve_feed_item","args":{"feed_item_id":1},"confirmation_required":true},{"tool":"regenerate_content","args":{"content_type":"social_copy","content_id":4},"confirmation_required":true}]}]}`
 - `401` invalid/missing token · `404` inaccessible workspace · `422` invalid status
 
 Account-wide by default; `workspace_id` narrows it. Note the two ids on each row:
@@ -69,9 +69,23 @@ Query params: `workspace_id` (optional int).
 ### POST /api/cmo/actions/:tool
 Run an explicit action without an LLM chat turn. Supported `:tool` values:
 `approve_feed_item`, `reject_feed_item`, `dismiss_feed_item`,
-`publish_content`, `reschedule_post`, `retry_post`, `mark_as_published`.
+`publish_content`, `regenerate_content`, `reschedule_post`, `retry_post`,
+`mark_as_published`.
 Form params are the corresponding ids (`feed_item_id` or `post_id`), plus
 `scheduled_at` for rescheduling and optional `reason` for rejection.
+
+`regenerate_content` is the exception: it addresses the CONTENT, not the card,
+so it takes `content_type` (snake_case: `social_copy` / `lookbook` /
+`feature_poster` / `idea`) and `content_id` — optionally `reference_url` and
+`template_code`. It rewrites the draft in place, keeping the same record id,
+and is the same action as the Revise button on the web feed card. Do not reach
+for `PATCH /api/cmo/content/...` for this: that endpoint overwrites the fields
+you give it verbatim and regenerates nothing.
+
+It spends credits, so it always returns `202 confirmation_required` on this
+endpoint — confirm it like any other. That is deliberate and unconditional: the
+owner should see what a rewrite costs before it runs, and it must not depend on
+what they last happened to type in the web chat.
 
 High-impact actions still obey CMO policy and return a confirmation instead of
 executing immediately:

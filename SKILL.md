@@ -60,10 +60,24 @@ A feed row carries **two different ids** and they are not interchangeable:
 - `feed_items[].id` → the review card. Use for `approve_feed_item`,
   `reject_feed_item`, `dismiss_feed_item`.
 - `feed_items[].feedable.id` → the content itself. Use for
-  `PATCH /api/cmo/content/:content_type/:content_id`.
+  `regenerate_content` and `PATCH /api/cmo/content/:content_type/:content_id`.
 
-Also convert the type: the feed reports `feedable.type` as `"SocialCopy"`, but the
-edit endpoint wants snake_case `social_copy`.
+Also convert the type: the feed reports `feedable.type` as `"SocialCopy"`, but both
+of those want snake_case `social_copy`.
+
+You do not have to do either conversion by hand: every entry in
+`available_actions` now carries an `args` object with the exact values for that
+row. Prefer it over re-deriving the id and the type.
+
+### The three things to do with a pending card
+`approve_feed_item`, `reject_feed_item`, and `regenerate_content` — the same
+three the owner sees on the web card (Approve / Reject / Revise). `regenerate_content`
+rewrites the draft in place, keeping the record id; it is what "改一下这条" means.
+It takes `content_type` + `content_id` (not `feed_item_id`) and, because it spends
+credits, always comes back as a confirmation to approve.
+
+`dismiss_feed_item` still works and still hides a card without training the AI,
+but it is no longer one of the three offered choices, so do not present it as one.
 
 ## Setup
 
