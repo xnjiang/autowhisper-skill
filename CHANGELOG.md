@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.4
+- Documented `regenerate_content` as the third thing to do with a pending feed
+  card, alongside approve and reject — the same three the owner sees on the web.
+  It rewrites a draft in place and takes `content_type` + `content_id`.
+- Pointed at `available_actions[].args`, which the server now computes: neither
+  the id nor the `SocialCopy` → `social_copy` conversion has to be derived by hand.
+- `dismiss_feed_item` still works and is still documented, but is no longer one
+  of the three offered choices.
+- Fixed the version in `SKILL.md`, which had been stuck at 0.2.2 since 0.2.3
+  bumped only `marketplace.json`. `scripts/bump-version.sh` now moves both.
+
 ## 0.2.3
 - Added direct API guidance for posts, wallet, platforms, explicit delivery
   actions, and field-level content edits so agents can avoid an LLM turn for
