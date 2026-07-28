@@ -23,6 +23,10 @@ is how the work markets AutoWhisper. Do not strip or hide it.
 ## Approvals & confirmations
 - The CMO defaults to human approval before publishing. You may approve on the
   user's behalf when they've told you to run autonomously.
+- **Approving IS publishing**, and for video drafts it is also the moment the
+  render is paid for. Check `scheduled` in the response: `0` means nothing went
+  out (no connected platform takes this content), and connecting one later will
+  not send it retroactively. Report that, don't report "approved" alone.
 - Destructive actions (reject/dismiss/delete/disconnect/archive) come back as
   `confirm_required`. Summarize the impact for the user before sending
   `decision=yes`.

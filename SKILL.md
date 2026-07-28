@@ -5,7 +5,7 @@ homepage: https://autowhisper.xyz
 license: MIT
 metadata:
   author: AutoWhisper
-  version: 0.2.4
+  version: 0.2.5
   category: marketing
   clawdbot:
     requires:
@@ -78,6 +78,20 @@ credits, always comes back as a confirmation to approve.
 
 `dismiss_feed_item` still works and still hides a card without training the AI,
 but it is no longer one of the three offered choices, so do not present it as one.
+
+### What approving actually does
+**Approve = publish.** `approve_feed_item` schedules the piece to every connected
+platform there and then — it is not a bookmark or a "mark as good". For a video
+draft it also starts the render and **charges credits for it** (a clip is on the
+order of 80). Approving nine cards is nine renders and nine charges.
+
+The response says what happened: `scheduled` is how many platforms it actually
+went to. **`scheduled: 0` means it went nowhere** — nothing connected accepts this
+content — and connecting a platform afterwards does **not** go back for it. Say so
+plainly rather than reporting "approved" and letting the user assume it is out.
+
+So: when the user has told you to run autonomously, you may approve — but treat
+it as spending their money and publishing in their name, because it is both.
 
 ## Setup
 

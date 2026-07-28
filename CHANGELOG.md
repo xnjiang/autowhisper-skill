@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.5
+- Said what approving actually does. `approve_feed_item` **publishes** — it
+  schedules the piece to every connected platform right then, and a video draft
+  also starts rendering and is charged for at that moment (~80 credits a clip).
+  The skill previously described it as "approve the good ones", which reads like
+  a bookmark; an agent approving nine cards was spending nine renders without
+  either side saying so.
+- Told the agent to read `scheduled` in the response. `0` means it went nowhere,
+  and connecting a platform afterwards does **not** send it retroactively — so
+  reporting a bare "approved" leaves the user believing something is live that
+  never left the building.
+
 ## 0.2.4
 - Documented `regenerate_content` as the third thing to do with a pending feed
   card, alongside approve and reject — the same three the owner sees on the web.
