@@ -1,0 +1,24 @@
+name: Check API contract
+
+# 服务端的作用域契约是单一数据源(autowhisper 仓库 app/services/api/contract.rb,
+# 公开在 GET /api/contract)。本 skill 的文档就是 agent 的行动依据 —— 文档漂走了
+# agent 不会报错,只会照着错的做。这个作业把"漂走"变成红灯。
+#
+# 每周也跑一次:契约可能在【服务端】那边变,而本仓库这周一次提交都没有。
+# 只挂 push 的话,漂移会一直等到下次有人碰这个仓库才被发现。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Compare docs against the live API contract
+        run: ./scripts/check-api-contract.sh
