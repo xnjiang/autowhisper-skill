@@ -13,16 +13,22 @@ Returns account-level product counts plus counts by active workspace.
 - `401` invalid/missing token
 
 ### GET /api/products
-Lists products in active workspaces.
+Lists products in **ONE workspace** — the user's current one unless
+`workspace_id` says otherwise. It does **not** span the account; for
+account-wide totals and the list of workspace ids use `/api/products/summary`.
 Query params: `workspace_id` (optional int), `include_archived` (optional
 bool), `limit` (optional int).
-- `200 {"scope":"account","count":12,"returned":12,"products":[{"id":1,"name":"...","product_type":"digital","workspace_name":"...","archived":false,"has_main_image":true}]}`
+- `200 {"scope":"workspace","count":12,"returned":12,"products":[{"id":1,"name":"...","product_type":"digital","workspace_name":"...","archived":false,"has_main_image":true}]}`
 - `401` invalid/missing token · `404` inaccessible workspace
 
 ### GET /api/cmo/status
-Returns a compact status snapshot: current workspace, product counts, feed
-status counts, platform connection counts, wallet balance, and automation
-settings.
+Returns a compact status snapshot for the user's **current workspace**: product
+counts, feed status counts, platform connection counts, automation settings —
+plus the account-level wallet and a `workspaces` directory listing every active
+workspace with its id and a `current` flag.
+**Call this first.** Every other read endpoint defaults to the current workspace
+and does not span the others, so the directory is how you learn what else exists
+and which id to pass.
 - `200 {"products":{"active_count":12,"archived_count":1,"total_count":13},"feed":{"pending":2},"platforms":{"connected_count":4},"wallet":{"formatted_balance":"9 tokens"},"settings":{...}}`
 - `401` invalid/missing token
 
@@ -34,16 +40,17 @@ Query params: `status` (`pending` default, or `approved`/`rejected`/
 - `200 {"status":"pending","counts":{"pending":2,"approved":1},"feed_items":[{"id":1,"status":"pending","feedable":{"type":"SocialCopy","id":4,"title":"...","product_name":"..."},"available_actions":[{"tool":"approve_feed_item","args":{"feed_item_id":1},"confirmation_required":true},{"tool":"regenerate_content","args":{"content_type":"social_copy","content_id":4},"confirmation_required":true}]}]}`
 - `401` invalid/missing token · `404` inaccessible workspace · `422` invalid status
 
-Account-wide by default; `workspace_id` narrows it. Note the two ids on each row:
+Scoped to the user's **current workspace** unless `workspace_id` names another
+one — it never spans the account. Note the two ids on each row:
 `id` is the feed item (for the `actions` endpoint), `feedable.id` is the content
 (for the content `PATCH`). See the warning under that endpoint.
 
 ### GET /api/posts
-Lists the delivery queue across **all active workspaces** (same scope as
-`/api/cmo/feed`); pass `workspace_id` to narrow to one.
+Lists the delivery queue for **ONE workspace** — the user's current one unless
+`workspace_id` says otherwise (same scope rule as `/api/cmo/feed`).
 Query params: `status` (optional `draft`/`scheduled`/`publishing`/`published`/
 `failed`), `workspace_id` (optional int), `limit` (optional int).
-- `200 {"scope":"account","workspace":null,"posts":[{"id":9,"status":"scheduled","scheduled_at":"...","workspace":{"id":1,"name":"..."},"platform":{"type":"linkedin"},"content":{"type":"SocialCopy","id":4,"title":"..."},"failure":null}]}`
+- `200 {"scope":"workspace","workspace":{"id":1,"name":"..."},"posts":[{"id":9,"status":"scheduled","scheduled_at":"...","workspace":{"id":1,"name":"..."},"platform":{"type":"linkedin"},"content":{"type":"SocialCopy","id":4,"title":"..."},"failure":null}]}`
 - `404` inaccessible workspace · `422` invalid status
 
 **Failed posts** carry a `failure` block — read it before deciding what to do:
@@ -57,11 +64,14 @@ Returns the token owner's available credits.
 - `200 {"balance":9.0,"formatted_balance":"9 credits","currency":"credits"}`
 
 ### GET /api/platforms
-Lists connected destinations and connection health across **all active
-workspaces**, so it can never disagree with `/api/cmo/status`'s counts. Pass
-`workspace_id` to narrow to one. Each row names its workspace.
+Lists connected destinations and connection health for **ONE workspace** — the
+user's current one unless `workspace_id` says otherwise. It agrees with
+`/api/cmo/status`'s platform counts because both are now scoped the same way.
+(Before 2026-08-09 this endpoint spanned every workspace while `status` reported
+a single `current_workspace` — same response, two scopes.) Each row still names
+its workspace so the caller can see which one it got.
 Query params: `workspace_id` (optional int).
-- `200 {"scope":"account","workspace":null,"platforms":[{"id":2,"workspace":{"id":1,"name":"..."},"type":"linkedin","connected":true,"needs_reconnect":false,"auto_publishable":true}]}`
+- `200 {"scope":"workspace","workspace":{"id":1,"name":"..."},"platforms":[{"id":2,"workspace":{"id":1,"name":"..."},"type":"linkedin","connected":true,"needs_reconnect":false,"auto_publishable":true}]}`
 - `404` inaccessible workspace
 
 ## Direct deterministic actions

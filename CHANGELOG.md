@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.3.0
+- **The CMO now only sees ONE workspace.** Server-side change on 2026-08-09:
+  the chat is scoped to the workspace you pass — it can list, name and act on
+  that workspace's products and nothing else. Naming a product that lives in
+  another workspace gets "I don't see it in this workspace", not a
+  cross-workspace action and not a silent substitution with a different product.
+  Each workspace also has its **own conversation history**, so switching
+  `workspace_id` switches which conversation you are in.
+- **The read endpoints stopped spanning the account.** `/api/cmo/feed`,
+  `/api/posts`, `/api/platforms` and `/api/products` used to return every active
+  workspace when `workspace_id` was omitted; they now return the user's current
+  workspace only. `scope` is always `"workspace"` — the `"account"` value is
+  gone. Nothing breaks, but an agent that omitted the param and believed it was
+  seeing everything now silently sees less, which is why this is a minor bump
+  and not a patch.
+- **Added the discovery route the narrower scope needs.** `/api/cmo/status` now
+  carries a `workspaces` directory (every active workspace, its id, and a
+  `current` flag). Call it first: it is how you learn which workspaces exist and
+  which id to pass. `/api/products/summary` remains the one account-wide read.
+- Corrected the reference doc, which described the old contract in six places —
+  including a line claiming `/api/platforms` "can never disagree with
+  `/api/cmo/status`'s counts". That was written to paper over a real
+  inconsistency: platforms spanned every workspace while `status` reported a
+  single `current_workspace`. Both are scoped the same way now, so the claim is
+  finally true.
+
 ## 0.2.5
 - Said what approving actually does. `approve_feed_item` **publishes** — it
   schedules the piece to every connected platform right then, and a video draft

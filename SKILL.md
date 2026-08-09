@@ -5,7 +5,7 @@ homepage: https://autowhisper.xyz
 license: MIT
 metadata:
   author: AutoWhisper
-  version: 0.2.5
+  version: 0.3.0
   category: marketing
   clawdbot:
     requires:
@@ -144,6 +144,14 @@ MID=$(curl -s -X POST https://autowhisper.xyz/api/cmo/message \
 ```
 Optional params: `--data-urlencode "product_id=123"` (act on a specific
 product), `--data-urlencode "workspace_id=45"`.
+
+⚠️ **The CMO only sees ONE workspace.** Since 2026-08-09 the chat is scoped to
+the workspace you pass: it can list, name and act on that workspace's products
+and nothing else. Naming a product that lives elsewhere gets you "I don't see it
+in this workspace" — not a cross-workspace action, and not a silent substitution
+with some other product. Each workspace also has its **own conversation history**;
+switching `workspace_id` switches which conversation you are in. Get the ids from
+`/api/cmo/status`'s `workspaces` directory.
 
 ⚠️ **Workspace decides the content language.** Omitting `workspace_id` runs the
 turn in the user's *first* active workspace, which may not be the one they mean.
