@@ -5,7 +5,7 @@ homepage: https://autowhisper.xyz
 license: MIT
 metadata:
   author: AutoWhisper
-  version: 0.3.0
+  version: 0.4.0
   category: marketing
   clawdbot:
     requires:
@@ -107,6 +107,20 @@ token, and run:
 mkdir -p ~/.config/autowhisper
 echo '{"api_token":"THEIR_TOKEN"}' > ~/.config/autowhisper/credentials.json
 ```
+Then pick a workspace — every `cmo/message` / `cmo/messages` / `cmo/confirm` call
+below is scoped to it, and an empty `workspace_id` is treated as not-present, so
+skipping this silently falls back to the account's first active workspace:
+```bash
+WS=$(curl -s https://autowhisper.xyz/api/cmo/status \
+  -H "Authorization: Bearer $TOKEN" | jq -r '.current_workspace.id')
+# jq prints the literal string "null" when current_workspace is absent — and
+# unlike an unset/empty $WS (which the server correctly treats as "not passed"
+# and falls back on, per above), the STRING "null" is a non-empty workspace_id
+# value, so every following call 404s instead of falling back. Catch it here.
+[ "$WS" = "null" ] && WS=""
+```
+`/api/cmo/status` also returns a `workspaces` array listing every active
+workspace; to act in a different one, set `WS` to that workspace's `id` instead.
 
 ## Which channel: direct API or CMO chat?
 
@@ -140,10 +154,11 @@ Everything is done by sending the CMO a message and polling for its reply.
 MID=$(curl -s -X POST https://autowhisper.xyz/api/cmo/message \
   -H "Authorization: Bearer $TOKEN" \
   --data-urlencode "message=Add my product https://mystore.com/widget and start the first batch" \
+  --data-urlencode "workspace_id=$WS" \
   | jq -r .message_id)
 ```
 Optional params: `--data-urlencode "product_id=123"` (act on a specific
-product), `--data-urlencode "workspace_id=45"`.
+product).
 
 ⚠️ **The CMO only sees ONE workspace.** Since 2026-08-09 the chat is scoped to
 the workspace you pass: it can list, name and act on that workspace's products
@@ -166,32 +181,43 @@ another language, say so in the message ("write this one in Japanese"); to chang
 the default, they change the workspace's content language in Settings.
 
 ### 2. Poll until the turn is done
+⚠️ **Pass the same `workspace_id` you sent with.** Polling is workspace-scoped: without it
+the API falls back to your first active workspace and returns `404 {"error":"not found"}`
+for a turn that is running perfectly well somewhere else.
+
 Always bound the loop. A turn that never completes must give up, not spin forever:
 ```bash
-for i in $(seq 1 40); do   # 40 x 3s = 2 min ceiling
-  RESP=$(curl -s https://autowhisper.xyz/api/cmo/messages/$MID -H "Authorization: Bearer $TOKEN")
+for i in $(seq 1 60); do   # 60 x 3s = 3 min ceiling (grounded ad advice can take >2 min)
+  RESP=$(curl -s "https://autowhisper.xyz/api/cmo/messages/$MID?workspace_id=$WS" -H "Authorization: Bearer $TOKEN")
   [ "$(echo "$RESP" | jq -r .done)" = "true" ] && break
   sleep 3
 done
 if [ "$(echo "$RESP" | jq -r .done)" != "true" ]; then
   echo "CMO turn did not finish in time" >&2   # tell the user it's still working; do NOT retry the message
 else
+  # The prose reply…
   echo "$RESP" | jq -r '.messages[] | select(.role=="assistant") | .content'
+  # …AND the cards. The CMO is told NOT to repeat card content in its prose, so a reply
+  # like "your ad plan is in the card below" is the WHOLE prose — the substance is here:
+  echo "$RESP" | jq -r '.messages[].cards // empty | to_entries[] | .value.advice // .value.guidance // .value.message'
 fi
 ```
-Relay the assistant's `content` to the user in their language. On timeout, say the
-CMO is still working and offer to check again — never re-send the same message, or
-the user pays for a second turn.
+**Never relay `.content` alone.** If you do, a turn whose payload is a card reaches the
+user as a sentence pointing at something they cannot see.
 
 ### 3. If the CMO asks to confirm a high-impact action
 A message with `message_kind == "confirm_required"` carries a
-`pending_action`. Show the user what it will do, then:
+`pending_action`. Show the user what it will do, then (again, **with `workspace_id`**):
 ```bash
 curl -s -X POST https://autowhisper.xyz/api/cmo/confirm \
   -H "Authorization: Bearer $TOKEN" \
   --data-urlencode "message_id=<that message_id>" \
+  --data-urlencode "workspace_id=$WS" \
   --data-urlencode "decision=yes"   # or no
 ```
+The reply carries what actually happened:
+`{"ok":true,"decision":"yes","result":{"message":"…","scheduled":2}}`.
+**Read `result.scheduled` and report it** — see *What approving actually does*.
 
 ## What you can do
 
@@ -214,6 +240,38 @@ A text description alone will **not** create it: the CMO requires a real product
 image (or a real image URL) and will ask for one. Placeholder/stock images
 (picsum, placeholder.com, etc.) are rejected. So always lead with the product's
 real URL or image.
+
+## Handing off to ads
+
+Content is the input to paid reach, and the CMO will plan the campaign for you — ask it
+in plain language once the user has a product and some creative:
+
+> "Give me a concrete ad-targeting plan for <product> — starting markets, targeting, and what to avoid."
+
+The plan comes back in `cards.targeting_advice.advice` (see *Poll*), **not** in the prose.
+Know what you are holding before you act on it:
+
+- **It is prose written for a person, not parameters.** Numbered "Start here" steps plus an
+  optional section. You translate it into whatever ad tool you drive.
+- **It is in the user's UI language.** A Chinese-speaking owner gets Chinese advice even for
+  an English-content workspace. Translate before feeding it to an ad API.
+- **It suggests a platform, it does not pick one.** "I'd start on Meta because…" is deliberate.
+  Do not report it as a locked decision.
+- **Two things are deliberately missing** — you must get them elsewhere:
+  - **No budget number.** It says "set a base daily budget". **Ask the user.** Never invent one.
+  - **Interest tags are search seeds, not IDs.** e.g. *Event planning*, *Wedding planning*,
+    *Facebook Page Admins* — resolve them to real targeting IDs in your ad tool.
+
+**If the user has an ads MCP connected** (e.g. Meta's official Ads MCP), the division of labour is:
+**AutoWhisper decides what to say and supplies the creative; the ads tool executes; you do the
+translation in between; the user sets the budget.** Do not claim AutoWhisper "ran the campaign".
+
+**No ads MCP connected yet?** Don't name or install a third-party npm package for this — point the
+user at Meta's own developer docs instead:
+<https://developers.facebook.com/documentation/ads-commerce/ads-ai-connectors/ads-mcp-server/ads-mcp-server-overview>
+
+Grounded ad advice does a live web search and **can take longer than two minutes** — poll to
+3 minutes before giving up, and never re-send (the user pays for a second turn).
 
 ## One-time human setup (say this clearly)
 

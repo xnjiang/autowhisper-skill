@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.4.0
+- **`poll` and `confirm` are workspace-scoped — pass the same `workspace_id` you
+  sent the message with, or they 404.** Documented the failure and added the
+  `$WS` capture step; hardened it against `jq -r '.current_workspace.id'`
+  silently printing the literal string `"null"` (which the server treats as a
+  present, non-empty value and 404s on) instead of falling back correctly.
+- **`actions[]` corrected to match reality, not the intended design.** The
+  tool-call log and the button-style cards collide on the same jsonb column
+  server-side (a symbol key vs. a string key) — the string key wins. A turn
+  that produced button cards silently has no tool-call log in `actions[]`
+  anymore. Docs now say so and point at `cards` (unaffected, separate keys)
+  as the reliable place to read a lifted payload from. Server behavior itself
+  is unchanged; this is a documentation correction, tracked as a known
+  limitation for separate work.
+- **Poll timing consistent everywhere.** Removed the leftover "a turn
+  typically completes in seconds" line — the branch had already settled on a
+  3-minute poll ceiling elsewhere (grounded ad advice measured over two
+  minutes in production), and the old line contradicted it.
+- **Documented `activation_guidance.ad_plan_cta`** — the one-click "get your
+  ad plan" affordance the server sends once a platform is connected. Agents
+  can now show it as a button and fire it as a normal chat turn.
+- **Added a real pointer for the ads-MCP handover.** "Connect Meta's official
+  Ads MCP" used to give the reader nothing to act on. Now links Meta's own
+  first-party developer docs — deliberately not a third-party npm package,
+  since this is also where an owner pastes an API token.
+
 ## 0.3.0
 - **The CMO now only sees ONE workspace.** Server-side change on 2026-08-09:
   the chat is scoped to the workspace you pass — it can list, name and act on

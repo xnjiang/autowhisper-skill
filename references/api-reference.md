@@ -126,25 +126,65 @@ Form params: `message` (required), `product_id` (optional int),
 
 ## GET /api/cmo/messages/:id
 Poll the turn started by the given user `message_id`.
-- `200 {"done":false,"messages":[]}` — still working
-- `200 {"done":true,"messages":[{"message_id":9,"role":"assistant","content":"...","message_kind":null,"pending_action":null}]}`
-- A message with `"message_kind":"confirm_required"` and a `pending_action`
-  `{ "tool":"...", "args":{...} }` requires a confirm.
-- A message may include `"actions":[{ "label":"...", "url":"https://cdn.autowhisper.xyz/...", "style":"secondary" }]`
-  — clickable cards the CMO surfaces (content **media links**, connect links).
-  The reply `content` never inlines raw URLs, so read `actions[].url` when you
-  need the image/video URL of a piece of content (ask e.g. "give me the image
-  link for X" / "list my recent content with images").
-- `404` unknown id / not yours
+Query params: `workspace_id` — **pass the same one you sent the message with.**
+This endpoint is workspace-scoped; omitting it falls back to your first active
+workspace and 404s on a turn that is running fine in another one.
 
-Poll every ~3s; a turn typically completes in seconds (generation of media
-runs in the background and lands in the user's Feed — `done:true` means the
-CMO's reply is ready, not that a video finished rendering).
+- `200 {"done":false,"messages":[]}` — still working
+- `200 {"done":true,"messages":[{"message_id":9,"role":"assistant","content":"...","message_kind":null,"pending_action":null,"actions":[...],"cards":{...}}]}`
+- `404 {"error":"not found","hint":"This message may live in another workspace…"}` —
+  **most often a missing `workspace_id`**, not a bad id.
+- A message with `"message_kind":"confirm_required"` and a `pending_action`
+  `{ "tool":"...", "args":{...} }` requires a confirm — see `POST /api/cmo/confirm` below.
+
+Poll every ~3s. Most turns complete in a few seconds, but grounded ad advice
+(`recommend_targeting`, which runs a live web search) has been measured at
+**over two minutes** in production — poll for up to **3 minutes** before
+giving up, and never re-send (that starts a second, separately charged turn
+instead of resuming the first one). (Generation of media runs in the
+background and lands in the user's Feed — `done:true` means the CMO's reply
+is ready, not that a video finished rendering.)
+
+### `actions[]` — one shape per turn, not both at once
+Two different things get written under `actions[]`:
+1. **Tool-call log** `{"tool":"recommend_targeting","args":{…},"result":{…}}` — what the
+   CMO actually ran, with its raw return value.
+2. **Clickable card** `{"label":"…","url":"https://cdn.autowhisper.xyz/…","style":"secondary"}` —
+   media links and connect links.
+
+They are stored under two metadata keys that collide on save (a symbol key for the
+tool log, a string key for the button cards, cast to the same jsonb column) — the
+string key wins. In practice: **on a turn that produced no button cards, `actions[]`
+holds the tool-call log; on any turn that produced button cards, `actions[]` holds
+only those cards and the tool-call log for that turn is gone**, even if a tool ran.
+This is a known server-side limitation, tracked separately — do not assume a tool
+result will be present in `actions[]`, and do not try to work around the collision
+yourself. The reply text never inlines raw URLs, so when you do get card-shaped
+entries, read `actions[].url` for a piece of content's image/video URL.
+
+### `cards` — the substance the prose deliberately omits, and unaffected by the above
+The CMO lifts certain tool results into finished cards and is instructed **not to repeat
+them in its prose**. `cards` uses its own separate metadata keys, so it does not
+collide with anything and is the reliable place to read a lifted payload from.
+Present keys (any may be absent):
+- `targeting_advice` → `{"advice": "<full ad plan, markdown>", "heading": "…"}`
+- `activation_guidance` → `{"guidance": "<next-steps funnel>", "heading": "…", "ad_plan_cta": {"label": "…", "message": "…"}}` —
+  `ad_plan_cta` is present only once the user has a social platform connected. It's a
+  one-click "get your ad plan" affordance: show `ad_plan_cta.label` as a button, and
+  if clicked, send `ad_plan_cta.message` verbatim as the next `POST /api/cmo/message`.
+- `inquiry_opener` → `{"message": "…", "paste_hint": "…", "share_url": "…"}`
+
+`cards` is `null` when the turn lifted none. **If you relay only `content`, these are lost.**
 
 ## POST /api/cmo/confirm
 Resolve a `confirm_required` bubble.
-Form params: `message_id`, `decision` (`yes`|`no`).
-- `200` resolved · `404` unknown · `422` not a confirm bubble · `410` already resolved
+Form params: `message_id`, `decision` (`yes`|`no`), **`workspace_id`** (same as the turn —
+omitting it 404s, as with polling).
+- `200 {"ok":true,"decision":"yes","result":{…}}` — `result` is the tool's own return value;
+  for `approve_feed_item` it carries `scheduled` (how many platforms it went to; `0` = nowhere)
+- `200 {"ok":true,"decision":"no"}` — declined, no `result`
+- `404 {"error":"not found","hint":"…"}` unknown, **or a missing `workspace_id`**
+- `422` not a confirm bubble / bad decision · `410` already resolved
 
 ## Notes
 - Rate limited; back off on `429`.
