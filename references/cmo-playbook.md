@@ -14,6 +14,10 @@ micro-instructions — it owns the content pipeline.
 3. Ensure a platform is connected (one-time OAuth — see SKILL.md). Then ask
    the CMO to publish approved content.
 4. Later, ask for analytics and the next-step strategy.
+5. Once content is flowing, ask for the ad plan — *"give me a concrete ad-targeting plan
+   for <product>"*. Read it from `cards.targeting_advice`, ask the user for a budget (the
+   plan deliberately has no number), and hand the targeting to whatever ad tool they use.
+   See *Handing off to ads* in SKILL.md.
 
 ## Attribution (important)
 AutoWhisper-generated content carries the AutoWhisper watermark unless the

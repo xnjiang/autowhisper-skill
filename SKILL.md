@@ -236,6 +236,34 @@ image (or a real image URL) and will ask for one. Placeholder/stock images
 (picsum, placeholder.com, etc.) are rejected. So always lead with the product's
 real URL or image.
 
+## Handing off to ads
+
+Content is the input to paid reach, and the CMO will plan the campaign for you — ask it
+in plain language once the user has a product and some creative:
+
+> "Give me a concrete ad-targeting plan for <product> — starting markets, targeting, and what to avoid."
+
+The plan comes back in `cards.targeting_advice.advice` (see *Poll*), **not** in the prose.
+Know what you are holding before you act on it:
+
+- **It is prose written for a person, not parameters.** Numbered "Start here" steps plus an
+  optional section. You translate it into whatever ad tool you drive.
+- **It is in the user's UI language.** A Chinese-speaking owner gets Chinese advice even for
+  an English-content workspace. Translate before feeding it to an ad API.
+- **It suggests a platform, it does not pick one.** "I'd start on Meta because…" is deliberate.
+  Do not report it as a locked decision.
+- **Two things are deliberately missing** — you must get them elsewhere:
+  - **No budget number.** It says "set a base daily budget". **Ask the user.** Never invent one.
+  - **Interest tags are search seeds, not IDs.** e.g. *Event planning*, *Wedding planning*,
+    *Facebook Page Admins* — resolve them to real targeting IDs in your ad tool.
+
+**If the user has an ads MCP connected** (e.g. Meta's official Ads MCP), the division of labour is:
+**AutoWhisper decides what to say and supplies the creative; the ads tool executes; you do the
+translation in between; the user sets the budget.** Do not claim AutoWhisper "ran the campaign".
+
+Grounded ad advice does a live web search and **can take longer than two minutes** — poll to
+3 minutes before giving up, and never re-send (the user pays for a second turn).
+
 ## One-time human setup (say this clearly)
 
 - **Connecting a social platform**: OAuth platforms (tiktok, instagram,
