@@ -166,32 +166,43 @@ another language, say so in the message ("write this one in Japanese"); to chang
 the default, they change the workspace's content language in Settings.
 
 ### 2. Poll until the turn is done
+⚠️ **Pass the same `workspace_id` you sent with.** Polling is workspace-scoped: without it
+the API falls back to your first active workspace and returns `404 {"error":"not found"}`
+for a turn that is running perfectly well somewhere else.
+
 Always bound the loop. A turn that never completes must give up, not spin forever:
 ```bash
-for i in $(seq 1 40); do   # 40 x 3s = 2 min ceiling
-  RESP=$(curl -s https://autowhisper.xyz/api/cmo/messages/$MID -H "Authorization: Bearer $TOKEN")
+for i in $(seq 1 60); do   # 60 x 3s = 3 min ceiling (grounded ad advice can take >2 min)
+  RESP=$(curl -s "https://autowhisper.xyz/api/cmo/messages/$MID?workspace_id=$WS" -H "Authorization: Bearer $TOKEN")
   [ "$(echo "$RESP" | jq -r .done)" = "true" ] && break
   sleep 3
 done
 if [ "$(echo "$RESP" | jq -r .done)" != "true" ]; then
   echo "CMO turn did not finish in time" >&2   # tell the user it's still working; do NOT retry the message
 else
+  # The prose reply…
   echo "$RESP" | jq -r '.messages[] | select(.role=="assistant") | .content'
+  # …AND the cards. The CMO is told NOT to repeat card content in its prose, so a reply
+  # like "your ad plan is in the card below" is the WHOLE prose — the substance is here:
+  echo "$RESP" | jq -r '.messages[].cards // empty | to_entries[] | .value.advice // .value.guidance // .value.message'
 fi
 ```
-Relay the assistant's `content` to the user in their language. On timeout, say the
-CMO is still working and offer to check again — never re-send the same message, or
-the user pays for a second turn.
+**Never relay `.content` alone.** If you do, a turn whose payload is a card reaches the
+user as a sentence pointing at something they cannot see.
 
 ### 3. If the CMO asks to confirm a high-impact action
 A message with `message_kind == "confirm_required"` carries a
-`pending_action`. Show the user what it will do, then:
+`pending_action`. Show the user what it will do, then (again, **with `workspace_id`**):
 ```bash
 curl -s -X POST https://autowhisper.xyz/api/cmo/confirm \
   -H "Authorization: Bearer $TOKEN" \
   --data-urlencode "message_id=<that message_id>" \
+  --data-urlencode "workspace_id=$WS" \
   --data-urlencode "decision=yes"   # or no
 ```
+The reply carries what actually happened:
+`{"ok":true,"decision":"yes","result":{"message":"…","scheduled":2}}`.
+**Read `result.scheduled` and report it** — see *What approving actually does*.
 
 ## What you can do
 
