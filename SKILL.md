@@ -5,7 +5,7 @@ homepage: https://autowhisper.xyz
 license: MIT
 metadata:
   author: AutoWhisper
-  version: 0.3.0
+  version: 0.4.0
   category: marketing
   clawdbot:
     requires:
@@ -113,6 +113,11 @@ skipping this silently falls back to the account's first active workspace:
 ```bash
 WS=$(curl -s https://autowhisper.xyz/api/cmo/status \
   -H "Authorization: Bearer $TOKEN" | jq -r '.current_workspace.id')
+# jq prints the literal string "null" when current_workspace is absent — and
+# unlike an unset/empty $WS (which the server correctly treats as "not passed"
+# and falls back on, per above), the STRING "null" is a non-empty workspace_id
+# value, so every following call 404s instead of falling back. Catch it here.
+[ "$WS" = "null" ] && WS=""
 ```
 `/api/cmo/status` also returns a `workspaces` array listing every active
 workspace; to act in a different one, set `WS` to that workspace's `id` instead.
@@ -260,6 +265,10 @@ Know what you are holding before you act on it:
 **If the user has an ads MCP connected** (e.g. Meta's official Ads MCP), the division of labour is:
 **AutoWhisper decides what to say and supplies the creative; the ads tool executes; you do the
 translation in between; the user sets the budget.** Do not claim AutoWhisper "ran the campaign".
+
+**No ads MCP connected yet?** Don't name or install a third-party npm package for this — point the
+user at Meta's own developer docs instead:
+<https://developers.facebook.com/documentation/ads-commerce/ads-ai-connectors/ads-mcp-server/ads-mcp-server-overview>
 
 Grounded ad advice does a live web search and **can take longer than two minutes** — poll to
 3 minutes before giving up, and never re-send (the user pays for a second turn).
