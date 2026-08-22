@@ -107,6 +107,15 @@ token, and run:
 mkdir -p ~/.config/autowhisper
 echo '{"api_token":"THEIR_TOKEN"}' > ~/.config/autowhisper/credentials.json
 ```
+Then pick a workspace — every `cmo/message` / `cmo/messages` / `cmo/confirm` call
+below is scoped to it, and an empty `workspace_id` is treated as not-present, so
+skipping this silently falls back to the account's first active workspace:
+```bash
+WS=$(curl -s https://autowhisper.xyz/api/cmo/status \
+  -H "Authorization: Bearer $TOKEN" | jq -r '.current_workspace.id')
+```
+`/api/cmo/status` also returns a `workspaces` array listing every active
+workspace; to act in a different one, set `WS` to that workspace's `id` instead.
 
 ## Which channel: direct API or CMO chat?
 
@@ -140,10 +149,11 @@ Everything is done by sending the CMO a message and polling for its reply.
 MID=$(curl -s -X POST https://autowhisper.xyz/api/cmo/message \
   -H "Authorization: Bearer $TOKEN" \
   --data-urlencode "message=Add my product https://mystore.com/widget and start the first batch" \
+  --data-urlencode "workspace_id=$WS" \
   | jq -r .message_id)
 ```
 Optional params: `--data-urlencode "product_id=123"` (act on a specific
-product), `--data-urlencode "workspace_id=45"`.
+product).
 
 ⚠️ **The CMO only sees ONE workspace.** Since 2026-08-09 the chat is scoped to
 the workspace you pass: it can list, name and act on that workspace's products

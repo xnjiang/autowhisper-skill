@@ -134,6 +134,8 @@ workspace and 404s on a turn that is running fine in another one.
 - `200 {"done":true,"messages":[{"message_id":9,"role":"assistant","content":"...","message_kind":null,"pending_action":null,"actions":[...],"cards":{...}}]}`
 - `404 {"error":"not found","hint":"This message may live in another workspace…"}` —
   **most often a missing `workspace_id`**, not a bad id.
+- A message with `"message_kind":"confirm_required"` and a `pending_action`
+  `{ "tool":"...", "args":{...} }` requires a confirm — see `POST /api/cmo/confirm` below.
 
 Poll every ~3s; a turn typically completes in seconds (generation of media
 runs in the background and lands in the user's Feed — `done:true` means the
