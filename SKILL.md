@@ -5,7 +5,7 @@ homepage: https://autowhisper.xyz
 license: MIT
 metadata:
   author: AutoWhisper
-  version: 0.4.0
+  version: 0.5.0
   category: marketing
   clawdbot:
     requires:

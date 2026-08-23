@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.0
+- **`actions[]` / `tool_calls[]` collision fixed server-side — docs updated to
+  match.** 0.4.0 documented the jsonb key collision (tool-call log and button
+  cards both serialising to the same `actions` column key, string key wins)
+  as a known limitation. That collision is now fixed: the tool-call log moved
+  to its own `tool_calls[]` field, and `actions[]` carries clickable cards
+  only — `{"label","url","style"}`. `cards` is unchanged and remains the
+  reliable place to read a lifted payload from. **Messages sent before this
+  fix may still carry the old mixed shape**: some `actions[]` entries on
+  those older rows are tool-log entries with no `label`/`url`/`style`, and
+  those rows have no `tool_calls[]` at all — don't assume every `actions[]`
+  entry is a card just because you're on this version of the docs.
+
 ## 0.4.0
 - **`poll` and `confirm` are workspace-scoped — pass the same `workspace_id` you
   sent the message with, or they 404.** Documented the failure and added the
