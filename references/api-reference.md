@@ -131,7 +131,7 @@ This endpoint is workspace-scoped; omitting it falls back to your first active
 workspace and 404s on a turn that is running fine in another one.
 
 - `200 {"done":false,"messages":[]}` — still working
-- `200 {"done":true,"messages":[{"message_id":9,"role":"assistant","content":"...","message_kind":null,"pending_action":null,"actions":[...],"cards":{...}}]}`
+- `200 {"done":true,"messages":[{"message_id":9,"role":"assistant","content":"...","message_kind":null,"pending_action":null,"actions":[...],"tool_calls":[...],"cards":{...}}]}`
 - `404 {"error":"not found","hint":"This message may live in another workspace…"}` —
   **most often a missing `workspace_id`**, not a bad id.
 - A message with `"message_kind":"confirm_required"` and a `pending_action`
@@ -145,22 +145,29 @@ instead of resuming the first one). (Generation of media runs in the
 background and lands in the user's Feed — `done:true` means the CMO's reply
 is ready, not that a video finished rendering.)
 
-### `actions[]` — one shape per turn, not both at once
-Two different things get written under `actions[]`:
-1. **Tool-call log** `{"tool":"recommend_targeting","args":{…},"result":{…}}` — what the
-   CMO actually ran, with its raw return value.
-2. **Clickable card** `{"label":"…","url":"https://cdn.autowhisper.xyz/…","style":"secondary"}` —
-   media links and connect links.
+### `actions[]` — clickable cards only
+`actions[]` holds **clickable cards**, one shape only:
+`{"label":"…","url":"https://cdn.autowhisper.xyz/…","style":"secondary"}` — media
+links and connect links. The reply text never inlines raw URLs, so this is where
+you read `actions[].url` for a piece of content's image/video URL.
 
-They are stored under two metadata keys that collide on save (a symbol key for the
-tool log, a string key for the button cards, cast to the same jsonb column) — the
-string key wins. In practice: **on a turn that produced no button cards, `actions[]`
-holds the tool-call log; on any turn that produced button cards, `actions[]` holds
-only those cards and the tool-call log for that turn is gone**, even if a tool ran.
-This is a known server-side limitation, tracked separately — do not assume a tool
-result will be present in `actions[]`, and do not try to work around the collision
-yourself. The reply text never inlines raw URLs, so when you do get card-shaped
-entries, read `actions[].url` for a piece of content's image/video URL.
+`actions[]` used to also carry the tool-call log, and the two collided: they were
+stored under two metadata keys that serialised to the same jsonb column (a symbol
+key for the log, a string key for the cards), so the card write silently discarded
+the log on any turn that also produced cards. As of the 2026-08-23 fix the log has
+its own field — see `tool_calls[]` below — so `actions[]` no longer collides with
+anything and can be trusted to hold cards only. **Messages sent before this fix may
+still show the old mixed shape**: some `actions[]` entries on those older rows are
+tool-log rows with no `label`/`url`/`style`, and those rows have no `tool_calls[]`
+at all.
+
+### `tool_calls[]` — the tool-call log
+`tool_calls[]` holds what the CMO actually ran this turn:
+`{"tool":"recommend_targeting","args":{…},"result":{…}}` per hop, in call order.
+This is the reliable place to read a tool's raw return value — e.g.
+`approve_feed_item`'s `result.scheduled` (how many platforms a piece actually went
+to; `0` means nowhere). Only present on messages sent after the 2026-08-23 fix;
+absent on older rows (see the note above).
 
 ### `cards` — the substance the prose deliberately omits, and unaffected by the above
 The CMO lifts certain tool results into finished cards and is instructed **not to repeat
