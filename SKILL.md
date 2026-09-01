@@ -5,7 +5,7 @@ homepage: https://autowhisper.xyz
 license: MIT
 metadata:
   author: AutoWhisper
-  version: 0.5.0
+  version: 0.6.0
   category: marketing
   clawdbot:
     requires:
@@ -48,7 +48,7 @@ content exists, fits the brand, and goes out — not that it goes viral.
 
 | Status | Meaning | What you do |
 |---|---|---|
-| `401` | bad/missing token | Tell the user to check their token at **Settings → Connect your agent** on https://autowhisper.xyz. |
+| `401` | bad/missing token | Re-run the device flow from *Setup* and write the new token to the credentials file. Do **not** tell the user to go copy a token by hand — that is the old path. |
 | `404` | unknown id, or a workspace this token cannot reach | Do not retry. Re-read the list endpoint to get a valid id. |
 | `410` | confirm bubble already resolved | Treat as done; do not re-confirm. |
 | `422` | invalid params (blank message, bad status, wrong content id/type) | Do not retry as-is — fix the argument. Most often you passed a `feed_item` id where a `content` id was wanted (see *Two kinds of id* below). |
@@ -100,13 +100,54 @@ Read the token once per session (`AUTOWHISPER_CREDENTIALS` overrides the path):
 CREDS="${AUTOWHISPER_CREDENTIALS:-$HOME/.config/autowhisper/credentials.json}"
 TOKEN=$(jq -r .api_token "$CREDS")
 ```
-If the file is missing, tell the user to sign up at https://autowhisper.xyz
-(free credits on signup), then **Settings → Connect your agent**, copy the
-token, and run:
+If the file is missing, **do not** send the user off to copy a token by hand.
+Run the device flow — they only have to click Approve once:
+
 ```bash
+# 1. Ask for a device code. `device_name` is what the user will see on the
+#    approval screen, so name yourself (e.g. "Claude Code").
+RESP=$(curl -s -X POST https://autowhisper.xyz/device/code \
+  -H 'Content-Type: application/json' \
+  -d '{"device_name":"YOUR_AGENT_NAME"}')
+DEVICE_CODE=$(jq -r .device_code <<<"$RESP")
+INTERVAL=$(jq -r .interval <<<"$RESP")     # seconds; respect it
+jq -r .verification_uri_complete <<<"$RESP"  # ← give this URL to the user
+
+# 2. Poll until they approve. The code expires in `expires_in` (900s).
+while :; do
+  sleep "$INTERVAL"
+  T=$(curl -s -X POST https://autowhisper.xyz/device/token \
+        -H 'Content-Type: application/json' \
+        -d "{\"device_code\":\"$DEVICE_CODE\"}")
+  case "$(jq -r '.error // "ok"' <<<"$T")" in
+    ok)                    break ;;                       # got the token
+    authorization_pending) continue ;;                    # not approved yet
+    slow_down)             INTERVAL=$((INTERVAL + 5)); continue ;;
+    access_denied)         echo "User denied the request."; exit 1 ;;
+    # expired_token (past `expires_in`, or already redeemed) and invalid_grant
+    # (server does not know this device_code) are both terminal — ask for a new
+    # code rather than retrying this one.
+    *)                     echo "Device code no longer usable — start over from step 1."; exit 1 ;;
+  esac
+done
+
+# 3. Save it. Both this skill and autowhisper-mcp read this same file.
 mkdir -p ~/.config/autowhisper
-echo '{"api_token":"THEIR_TOKEN"}' > ~/.config/autowhisper/credentials.json
+jq -n --arg t "$(jq -r .access_token <<<"$T")" '{api_token:$t}' \
+  > ~/.config/autowhisper/credentials.json
+chmod 600 ~/.config/autowhisper/credentials.json
 ```
+
+**While polling, tell the user what you are waiting for** — paste the URL and
+say you will continue once they approve. Do not poll silently; a wall of
+nothing for 15 minutes reads as a hang.
+
+The user still needs an account. If they do not have one, the approval page
+will ask them to sign up first (free credits on signup) and then land back on
+the approval screen — you do not need a separate "go register" step.
+
+⛔ Never ask the user to paste a token into the chat. The device flow exists
+so the token travels from the browser to disk without passing through you.
 Then pick a workspace — every `cmo/message` / `cmo/messages` / `cmo/confirm` call
 below is scoped to it, and an empty `workspace_id` is treated as not-present, so
 skipping this silently falls back to the account's first active workspace:
