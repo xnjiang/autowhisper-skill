@@ -89,6 +89,47 @@ if [ -n "$disc" ]; then
   [ "$found" = 1 ] || note "$DOC 没有提到任何发现入口($(echo "$disc" | tr '\n' ' '))—— agent 无从知道还有哪些工作区"
 fi
 
+# ── ⑤ 动作工具清单必须与契约一致(2026-09-21 补) ────────────────────────
+# 为什么加:boost_post 服务端 2026-08-28 上线,本文档一直只列八个工具,漏了三周
+# 没有任何东西报错 —— 而 agent 只会照着文档给的清单去调,所以那个能力实际上
+# 【不存在】。①~④ 守的是作用域,守不住"服务端多了一个工具"这类漂移。
+#
+# ⚠️⚠️ 判据必须钉在【那份清单本身】,不是"全文出现过这个词"。第一版 grep 整个
+#    文件,于是下面那段解释 boost_post 为什么曾经漏掉的散文也算数 —— 把工具从
+#    清单里删掉,检查照样绿。写完当场验过才发现:守卫钉了措辞,没钉事实。
+#
+# ⚠️ 契约在 2026-09-21 之前不发布 direct_action_tools。拿不到就跳过【并说出来】,
+#    不静默通过 —— 同本文件顶部那条纪律。
+tools="$(printf '%s' "$CONTRACT" | python3 -c '
+import json,sys
+d=json.load(sys.stdin)
+print("\n".join(t["name"] for t in d.get("direct_action_tools", [])))')"
+if [ -z "$tools" ]; then
+  echo "⏭  这个契约没有 direct_action_tools(服务端早于 2026-09-21)—— 跳过工具清单核对"
+else
+  # 只取 "Supported `:tool` values:" 之后、到空行为止的那几行 —— 那才是清单。
+  tool_list="$(awk '
+    /Supported `:tool` values:/ { grab = 1; next }
+    grab && /^[[:space:]]*$/     { exit }
+    grab                         { print }
+  ' "$DOC")"
+  if [ -z "$tool_list" ]; then
+    note "$DOC 里找不到 'Supported \`:tool\` values:' 那份清单 —— 清单换了写法就必须同步改这个判据,否则它会静默变成永远绿"
+  else
+    while IFS= read -r t; do
+      [ -z "$t" ] && continue
+      printf '%s' "$tool_list" | grep -q "\`$t\`" \
+        || note "契约声明了工具 $t,$DOC 的清单里却没有 —— agent 看不到的能力等于不存在(boost_post 就这么漏了三周)"
+    done <<< "$tools"
+
+    # 反向:清单列了契约没有的工具 ⇒ agent 会去调一个服务端不认的名字。
+    for t in $(printf '%s' "$tool_list" | grep -oE '`[a-z_]+`' | tr -d '`' | sort -u); do
+      printf '%s\n' "$tools" | grep -qx "$t" \
+        || note "$DOC 的清单里有 $t,但契约没有它 —— agent 会调一个服务端不认的名字"
+    done
+  fi
+fi
+
 # ── ④ SKILL.md 必须写明 CMO 只看得见一个工作区 ──────────────────────────
 # 这是 agent 最容易做错的一件事:点名别的工作区的产品,以为 CMO 够得到。
 grep -qi "only sees ONE workspace" "$SKILL" \
