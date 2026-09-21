@@ -74,13 +74,37 @@ Query params: `workspace_id` (optional int).
 - `200 {"scope":"workspace","workspace":{"id":1,"name":"..."},"platforms":[{"id":2,"workspace":{"id":1,"name":"..."},"type":"linkedin","connected":true,"needs_reconnect":false,"auto_publishable":true}]}`
 - `404` inaccessible workspace
 
+### GET /api/performance
+Cross-channel results for ONE workspace — the only endpoint that answers "did any
+of this work?" rather than "what did we make?". Shipped 2026-09-01; add it to any
+answer about which creative to fund, scale or stop.
+
+Params: optional `workspace_id` (omit = current workspace, others NOT included),
+optional `window_days` (server clamps to its supported range; has a default).
+
+Returns `{scope, workspace_id, period:{from,to}, layers, layer_sources,
+by_channel, ad_spend_cents}`.
+- `layers` is the four-layer funnel; `layer_sources` says where each number came
+  from, so you can tell a measured figure from a derived one.
+- `by_channel` breaks the same window down per platform.
+- ⚠️ `ad_spend_cents` is **`null`, not `0`, when the account has no active
+  workspace**. `null` means we cannot answer; `0` asserts nothing was spent.
+  Never render one as the other — that invents a fact about the owner's budget.
+
 ## Direct deterministic actions
 
 ### POST /api/cmo/actions/:tool
 Run an explicit action without an LLM chat turn. Supported `:tool` values:
 `approve_feed_item`, `reject_feed_item`, `dismiss_feed_item`,
 `publish_content`, `regenerate_content`, `reschedule_post`, `retry_post`,
-`mark_as_published`.
+`mark_as_published`, `boost_post`.
+
+> **The live list is `direct_action_tools` in `GET /api/contract`, with each
+> tool's `confirmation_required`.** This section is a copy for reading, and a
+> copy drifts: `boost_post` shipped on the server 2026-08-28 and was missing
+> here until 2026-09-21, so agents were told about eight tools when there were
+> nine. Read the contract when it matters; trust this list only for orientation.
+
 Form params are the corresponding ids (`feed_item_id` or `post_id`), plus
 `scheduled_at` for rescheduling and optional `reason` for rejection.
 
@@ -101,7 +125,19 @@ High-impact actions still obey CMO policy and return a confirmation instead of
 executing immediately:
 - `202 {"confirmation_required":true,"message_id":123}` → call
   `POST /api/cmo/confirm` with that id.
-- `200 {"success":true,"message":"..."}` → action completed.
+- `200 {"success":true,"message":"...","receipt_text":"..."}` → action completed.
+
+**When both are present, tell the owner `receipt_text`, not `message`.** The
+server computes `receipt_text` from what actually happened and writes it for a
+human to read; `message` is written for the model and may be the generic one.
+Server-side since 2026-09-13, after a fixed lookup table was found overwriting
+the computed receipt — "queued for sending" was reported even when zero ad
+channels accepted the piece. Fixed wording is not evidence of a result. The
+field name is published as `receipt_field` in `GET /api/contract`.
+
+⚠️ `receipt_text` is in the OWNER's language. It does not replace checking
+`scheduled` — `scheduled: 0` means the piece went nowhere, and that is the one
+fact you must state plainly whatever language the receipt is in.
 
 ### PATCH /api/cmo/content/:content_type/:content_id
 Edits exact fields without a generation run or credit charge. `content_type` is
@@ -188,7 +224,9 @@ Resolve a `confirm_required` bubble.
 Form params: `message_id`, `decision` (`yes`|`no`), **`workspace_id`** (same as the turn —
 omitting it 404s, as with polling).
 - `200 {"ok":true,"decision":"yes","result":{…}}` — `result` is the tool's own return value;
-  for `approve_feed_item` it carries `scheduled` (how many platforms it went to; `0` = nowhere)
+  for `approve_feed_item` it carries `scheduled` (how many platforms it went to; `0` = nowhere),
+  and `receipt_text` when the tool wrote one — prefer it over `message` exactly as on the
+  direct-action path above, so the two paths never say different things about the same result
 - `200 {"ok":true,"decision":"no"}` — declined, no `result`
 - `404 {"error":"not found","hint":"…"}` unknown, **or a missing `workspace_id`**
 - `422` not a confirm bubble / bad decision · `410` already resolved

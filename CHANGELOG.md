@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.7.0
+- **`receipt_text` is now the sentence to read out.** Documented on both the
+  direct-action and confirm paths: when the server sends it, tell the owner that
+  and not `message`. The server computes `receipt_text` from what actually
+  happened (since 2026-09-13); `message` is written for the model. It does not
+  replace checking `scheduled` — `scheduled: 0` means the piece went nowhere and
+  must be stated plainly whatever language the receipt is in.
+- **`GET /api/performance` documented.** Shipped server-side 2026-09-01 and
+  absent from this reference until now, so an agent had no way to answer "did any
+  of this work?" — only "what did we make?". Note `ad_spend_cents` is `null`, not
+  `0`, when there is no active workspace: `null` cannot answer, `0` asserts.
+- **`boost_post` added to the action list.** It shipped server-side 2026-08-28;
+  this reference listed eight tools when there were nine.
+- The action list now points at `direct_action_tools` in `GET /api/contract` as
+  the live source. A copy drifts — that is how `boost_post` went missing for
+  three weeks.
+
 ## 0.5.0
 - **`actions[]` / `tool_calls[]` collision fixed server-side — docs updated to
   match.** 0.4.0 documented the jsonb key collision (tool-call log and button
