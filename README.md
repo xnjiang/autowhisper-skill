@@ -17,9 +17,9 @@ fits your brand, and goes out — not that it goes viral.)
 
 ## Quick Start
 
-> **Using an MCP client instead of a skill-capable CLI?** Skip the install and connect
-> to `https://autowhisper.xyz/mcp` — Claude.ai / ChatGPT connectors sign in with OAuth,
-> Claude Code / Cursor send `Authorization: Bearer <your token>`. Same CMO, same tools.
+> **Using Claude.ai, ChatGPT, Claude Desktop, Claude Code or Cursor?** Skip the install and
+> add the URL `https://autowhisper.xyz/mcp` as a connector (Claude Code: `claude mcp add --transport http autowhisper https://autowhisper.xyz/mcp`,
+> then `/mcp` → Authenticate). You'll click **Approve** once. Same CMO, same tools.
 
 ### 1. Install skill
 
