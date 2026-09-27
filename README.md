@@ -17,6 +17,10 @@ fits your brand, and goes out — not that it goes viral.)
 
 ## Quick Start
 
+> **Using an MCP client instead of a skill-capable CLI?** Skip the install and connect
+> to `https://autowhisper.xyz/mcp` — Claude.ai / ChatGPT connectors sign in with OAuth,
+> Claude Code / Cursor send `Authorization: Bearer <your token>`. Same CMO, same tools.
+
 ### 1. Install skill
 
 ```bash
